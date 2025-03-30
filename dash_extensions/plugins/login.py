@@ -8,7 +8,6 @@ from flask_login import LoginManager
 from ._typing import RequestLoader, UserLoader, UserMixin
 
 
-
 class LoginPlugin(DashPlugin, Generic[UserMixin]):
     def __init__(self, name: str = "login", app: Dash | None = None):
         super().__init__(name, app)

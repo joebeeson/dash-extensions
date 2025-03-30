@@ -2,16 +2,18 @@ __all__ = [
     "DashPlugin",
     "Registry"
 ]
+
 from typing import Iterator
 
 from dash import Dash
+
+from dash_extensions.utils import attr_setdefault
 
 
 class DashPlugin:
     def __init__(self, name: str, app: Dash | None = None):
         self.name = name
         self.app = app
-        print(f"Created {self}")
 
         if app is not None:
             self.plug(app)
@@ -20,64 +22,15 @@ class DashPlugin:
         return f"{self.__class__.__name__}(name={self.name!r}, app={self.app!r})"
 
     def plug(self, app: Dash) -> None:
+        _attach_app_plugin(app, self)
         self.app = app
-        print(f"Plugged {self}")
-        return
-        self.config = AttributeDict(
-            name=name,
-            assets_folder=os.path.join(
-                flask.helpers.get_root_path(name), assets_folder
-            ),  # type: ignore
-            assets_url_path=assets_url_path,
-            assets_ignore=assets_ignore,
-            assets_external_path=get_combined_config(
-                "assets_external_path", assets_external_path, ""
-            ),
-            pages_folder=pages_folder_config(name, pages_folder, use_pages),
-            eager_loading=eager_loading,
-            include_assets_files=get_combined_config(
-                "include_assets_files", include_assets_files, True
-            ),
-            url_base_pathname=base_prefix,
-            routes_pathname_prefix=routes_prefix,
-            requests_pathname_prefix=requests_prefix,
-            serve_locally=serve_locally,
-            compress=get_combined_config("compress", compress, False),
-            meta_tags=meta_tags or [],
-            external_scripts=external_scripts or [],
-            external_stylesheets=external_stylesheets or [],
-            suppress_callback_exceptions=get_combined_config(
-                "suppress_callback_exceptions", suppress_callback_exceptions, False
-            ),
-            prevent_initial_callbacks=prevent_initial_callbacks,
-            show_undo_redo=show_undo_redo,
-            extra_hot_reload_paths=extra_hot_reload_paths or [],
-            title=title,
-            update_title=update_title,
-            include_pages_meta=include_pages_meta,
-            description=description,
-        )
-        self.config.set_read_only(
-            [
-                "name",
-                "assets_folder",
-                "assets_url_path",
-                "eager_loading",
-                "serve_locally",
-                "compress",
-                "pages_folder",
-            ],
-            "Read-only: can only be set in the Dash constructor",
-        )
-        self.config.finalize(
-            "Invalid config key. Some settings are only available "
-            "via the Dash constructor"
-        )
-        pass
 
 
 class Registry(dict):
+    # TODO: Need to be able to close the registry at startup ala AttributeDict
+
     def __init__(self, *plugins: DashPlugin):
+        # TODO: Check for plugin name duplicates
         super().__init__({plugin.name: plugin for plugin in plugins})
 
     def plug(self, app: Dash) -> None:
@@ -93,3 +46,23 @@ class Registry(dict):
         except KeyError:
             raise AttributeError(f"No such plugin named {item!r}")
 
+    def __setattr__(self, key, val):
+        print(f"setattr {key}")
+        return super().__setitem__(key, val)
+
+    def __setitem__(self, key, val):
+        print(f"setitem {key}")
+        return super().__setitem__(key, val)
+
+
+def _attach_app_plugin(app: Dash, plugin: DashPlugin) -> None:
+    plugins = attr_setdefault(app, "plugins", Registry())
+    plugin_name = plugin.name
+    existing_plugin = getattr(plugins, plugin_name)
+
+    if existing_plugin:
+        raise RuntimeError(
+            f"Plugin name collision: {existing_plugin} and {plugin}"
+        )
+
+    setattr(plugins, plugin.name, plugin)

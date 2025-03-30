@@ -7,6 +7,8 @@ DashNode = Component | list[Component] | str | list[str]
 
 T = TypeVar("T")
 
+def attr_setdefault(obj, attr, default):
+    return getattr(obj, attr) if hasattr(obj, attr) else setattr(obj, attr, default) or default
 
 def get_id(component: ComponentIdentifier) -> str | dict:
     if isinstance(component, Component):
