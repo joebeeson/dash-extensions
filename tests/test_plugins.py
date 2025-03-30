@@ -1,6 +1,6 @@
 import pytest
 
-from dash_extensions.plugins import DashPlugin, Registry
+from dash_extensions.plugins import DashPlugin, PluginRegistry
 from dash import Dash
 
 
@@ -12,7 +12,7 @@ def test_registry_unique_names():
     plugin1 = DashPlugin("unique1")
     plugin2 = DashPlugin("unique2")
     # Creating the registry should not raise an error
-    registry = Registry(plugin1, plugin2)
+    registry = PluginRegistry(plugin1, plugin2)
 
     # Verify that the registry contains the correct plugins
     assert registry["unique1"] is plugin1
@@ -26,7 +26,7 @@ def test_registry_duplicate_names():
     plugin1 = DashPlugin("dupe")
     plugin2 = DashPlugin("dupe")
     with pytest.raises(ValueError, match="Plugins must have unique names"):
-        Registry(plugin1, plugin2)
+        PluginRegistry(plugin1, plugin2)
 
 
 # Test that attempting to attach a plugin to a Dash app when a plugin with the
