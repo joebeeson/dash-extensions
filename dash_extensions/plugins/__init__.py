@@ -1,7 +1,4 @@
-__all__ = [
-    "DashPlugin",
-    "Registry"
-]
+__all__ = ["DashPlugin", "Registry"]
 
 from typing import Iterator
 
@@ -30,11 +27,13 @@ class Registry(dict):
     # TODO: Need to be able to close the registry at startup ala AttributeDict
 
     def __init__(self, *plugins: DashPlugin):
-        # TODO: Check for plugin name duplicates
+        plugin_names = list(plugin.name for plugin in plugins)
+        if len(plugin_names) != len(set(plugin_names)):
+            raise ValueError("Plugins must have unique names")
         super().__init__({plugin.name: plugin for plugin in plugins})
 
     def plug(self, app: Dash) -> None:
-        for plugin in self:
+        for plugin in self.attach(app):
             plugin.plug(app)
 
     def __iter__(self) -> Iterator[DashPlugin]:
@@ -47,22 +46,29 @@ class Registry(dict):
             raise AttributeError(f"No such plugin named {item!r}")
 
     def __setattr__(self, key, val):
-        print(f"setattr {key}")
         return super().__setitem__(key, val)
 
     def __setitem__(self, key, val):
-        print(f"setitem {key}")
         return super().__setitem__(key, val)
+
+    def attach(self, app: Dash) -> "Registry":
+        existing_registry: Registry | None = getattr(app, "plugins")
+
+        if existing_registry is not None:
+            # TODO: Check for duplicates (name):
+            existing_registry.update(self)
+        else:
+            app.plugins = self
+
+        return self
 
 
 def _attach_app_plugin(app: Dash, plugin: DashPlugin) -> None:
     plugins = attr_setdefault(app, "plugins", Registry())
     plugin_name = plugin.name
-    existing_plugin = getattr(plugins, plugin_name)
+    existing_plugin = getattr(plugins, plugin_name, None)
 
     if existing_plugin:
-        raise RuntimeError(
-            f"Plugin name collision: {existing_plugin} and {plugin}"
-        )
+        raise RuntimeError(f"Plugin name collision: {existing_plugin} and {plugin}")
 
     setattr(plugins, plugin.name, plugin)
