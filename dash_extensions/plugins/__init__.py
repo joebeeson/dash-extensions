@@ -8,6 +8,8 @@ from dash_extensions.utils import attr_setdefault
 
 
 class DashPlugin:
+    # TODO: How can we add our own transforms to the application?
+
     def __init__(self, name: str, app: Dash | None = None):
         self.name = name
         self.app = app
